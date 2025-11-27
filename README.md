@@ -14,7 +14,7 @@ git commit -am "+semver: major | Update to node 21"
 
 | Name | Example |
 | --- | --- |
-| Major | 0, 1, 2 |
+| Major | 0, 1, 2, 3 |
 | FullSemVer | 1.0.0, 0.3.0-alpha.2, 0.3.0-feat-add-kitties.0 |
 
 ### Examples
