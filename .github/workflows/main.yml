@@ -1,0 +1,64 @@
+on:
+  workflow_call:
+    outputs:
+      FullSemVer:
+        description: The semantic version such as 1.0.0 or 1.0.0-myfeature for a branch
+        value: ${{ jobs.versioning.outputs.FullSemVer }}
+      Major:
+        description: The major version such as 0, 1 or 2
+        value: ${{ jobs.versioning.outputs.Major }}
+
+jobs:
+  versioning:
+    name: Versioning
+    runs-on: ubuntu-latest
+    outputs:
+      FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}
+      Major: ${{ steps.gitversion.outputs.Major }}
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout code
+        with:
+          fetch-depth: 0
+
+      - uses: gittools/actions/gitversion/setup@v3
+        name: Install GitVersion
+        with:
+          versionSpec: '5.x'
+
+      - name: Setup config
+        run: |
+          cat << EOF > GitVersion.yml
+          mode: Mainline
+          commit-message-incrementing: Enabled
+          major-version-bump-message: '\+semver:\s?(breaking|major)'
+          minor-version-bump-message: '\+semver:\s?(feature|minor)'
+          patch-version-bump-message: '\+semver:\s?(fix|patch)'
+
+          branches:
+            main:
+              tag: '' # Never add a branch tag to versions from the main/master branch
+              regex: ^(main|master)$
+              increment: Patch # Always bump the patch version
+              is-release-branch: true
+            pull-request:
+              regex: ^(pull|pull\-requests|pr)[/-]
+              tag: pr
+              increment: Inherit # Find the branch where the current branch was branched from and use its values for increment
+              is-release-branch: false
+              is-mainline: false
+          EOF
+
+      - uses: gittools/actions/gitversion/execute@v3
+        name: Determine Version
+        id: gitversion
+        with:
+          configFilePath: GitVersion.yml
+
+      - name: Update Summary
+        run: |
+          echo "Generated and sent versions to output" >> $GITHUB_STEP_SUMMARY
+          echo '``` bash' >> $GITHUB_STEP_SUMMARY
+          echo "FullSemVer: ${{ steps.gitversion.outputs.FullSemVer }}" >> $GITHUB_STEP_SUMMARY
+          echo "Major:      ${{ steps.gitversion.outputs.Major }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
